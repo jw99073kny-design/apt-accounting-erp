@@ -1,0 +1,66 @@
+[
+    {
+        "id": 1,
+        "vendor": "한국전력공사",
+        "date": "2026-10-01",
+        "supply_value": 3500000,
+        "vat": 350000,
+        "total": 3850000,
+        "category": "전기료",
+        "status": "정상"
+    },
+    {
+        "id": 2,
+        "vendor": "ABC승강기(주)",
+        "date": "2026-10-05",
+        "supply_value": 500000,
+        "vat": 50000,
+        "total": 550000,
+        "category": "수선유지비",
+        "status": "정상"
+    },
+    {
+        "id": 3,
+        "vendor": "현대엘리베이터(주)",
+        "date": "2026-10-07",
+        "supply_value": 750000,
+        "vat": 75000,
+        "total": 825000,
+        "category": "수선유지비",
+        "status": "정상",
+        "source_file": "invoice_elevator.png"
+    },
+    {
+        "id": 4,
+        "vendor": "(주)한국소방방재",
+        "date": "2026-10-08",
+        "supply_value": 450000,
+        "vat": 45000,
+        "total": 495000,
+        "category": "위탁관리비",
+        "status": "정상",
+        "source_file": "invoice_fire.pdf"
+    },
+    {
+        "id": 5,
+        "vendor": "대박건설(주)",
+        "date": "2026-10-09",
+        "supply_value": 15000000,
+        "vat": 1500000,
+        "total": 16500000,
+        "category": "수선유지비",
+        "status": "🚨 이상 지출 주의 (계정 평균 687,500원 대비 24.0배 급증)",
+        "source_file": "invoice_suspicious.png"
+    },
+    {
+        "id": 6,
+        "vendor": "신규 업로드 거래처",
+        "date": "2026-10-10",
+        "supply_value": 200000,
+        "vat": 20000,
+        "total": 220000,
+        "category": "잡지출",
+        "status": "정상",
+        "source_file": "아파트_수선유지비_거래명세서.pdf"
+    }
+]
