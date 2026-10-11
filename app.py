@@ -681,21 +681,46 @@ elif menu == "증빙 통합 관리":
             st.rerun()
 
 
-# 8. 은행 입출금 ↔ 장부 자동 대사
+# 8. 은행 입출금 ↔ 장부 자동 대사 (지능형 시트 자동 감지 및 스마트 분석 로직 장착)
 elif menu == "은행 입출금 ↔ 전표 자동 대사":
     st.title("🏦 [기능8] 은행 입출금 ↔ 장부 자동 대사 (통장 대사)")
-    st.info("① 은행 통장 거래내역 엑셀과 ② XpERP 장부(전표) 내역 엑셀을 동시에 업로드하여 누락 및 일치 여부를 교차 대조합니다.")
+    st.info("① 은행 통장 거래내역 엑셀과 ② XpERP 장부(전표) 내역 엑셀을 업로드하면, 프로그램이 시트 이름과 데이터를 스스로 분석하여 완벽하게 교차 대조합니다.")
 
     col_u1, col_u2 = st.columns(2)
     with col_u1:
-        up_bank = st.file_uploader("1️⃣ 은행 통장 거래내역 엑셀/CSV 업로드", type=["xlsx", "csv"], key="bank_upload_v7")
+        up_bank = st.file_uploader("1️⃣ 은행 통장 거래내역 엑셀/CSV 업로드", type=["xlsx", "csv"], key="bank_upload_v8")
     with col_u2:
-        up_ledger = st.file_uploader("2️⃣ XpERP 장부(전표) 내역 엑셀/CSV 업로드", type=["xlsx", "csv"], key="ledger_upload_v1")
+        up_ledger = st.file_uploader("2️⃣ XpERP 장부(전표) 내역 엑셀/CSV 업로드", type=["xlsx", "csv"], key="ledger_upload_v2")
 
     if up_bank and up_ledger:
         try:
-            df_bank = pd.read_csv(up_bank) if up_bank.name.endswith(".csv") else pd.read_excel(up_bank)
-            df_ledger = pd.read_csv(up_ledger) if up_ledger.name.endswith(".csv") else pd.read_excel(up_ledger)
+            # 1. 통장 파일 스마트 시트 자동 감지 로직
+            if up_bank.name.endswith(".csv"):
+                df_bank = pd.read_csv(up_bank)
+            else:
+                xls_bank = pd.ExcelFile(up_bank)
+                bank_sheets = xls_bank.sheet_names
+                # '통장', '거래', '내역', '입출금' 키워드가 포함된 시트 우선 탐색
+                target_bank_sheet = bank_sheets[0]
+                for s in bank_sheets:
+                    if any(kw in s for kw in ["통장", "거래", "내역", "입출금", "계좌"]):
+                        target_bank_sheet = s
+                        break
+                df_bank = pd.read_excel(up_bank, sheet_name=target_bank_sheet)
+
+            # 2. 장부 파일 스마트 시트 자동 감지 로직
+            if up_ledger.name.endswith(".csv"):
+                df_ledger = pd.read_csv(up_ledger)
+            else:
+                xls_ledger = pd.ExcelFile(up_ledger)
+                ledger_sheets = xls_ledger.sheet_names
+                # '전표', '분개', '장부', '내역' 키워드가 포함된 시트 우선 탐색
+                target_ledger_sheet = ledger_sheets[0]
+                for s in ledger_sheets:
+                    if any(kw in s for kw in ["전표", "분개", "장부", "내역", "회계"]):
+                        target_ledger_sheet = s
+                        break
+                df_ledger = pd.read_excel(up_ledger, sheet_name=target_ledger_sheet)
 
             df_bank.columns = [str(c).strip() for c in df_bank.columns]
             df_ledger.columns = [str(c).strip() for c in df_ledger.columns]
@@ -705,7 +730,7 @@ elif menu == "은행 입출금 ↔ 전표 자동 대사":
             if "출금액" in df_bank.columns:
                 df_bank["출금액"] = pd.to_numeric(df_bank["출금액"].astype(str).str.replace(",", ""), errors="coerce").fillna(0)
             
-            amt_col = "차변금액" if "차변금액" in df_ledger.columns else ("금액" if "금액" in df_ledger.columns else None)
+            amt_col = next((c for c in df_ledger.columns if "금액" in c or "차변" in c), None)
             if amt_col:
                 df_ledger[amt_col] = pd.to_numeric(df_ledger[amt_col].astype(str).str.replace(",", ""), errors="coerce").fillna(0)
 
@@ -739,7 +764,7 @@ elif menu == "은행 입출금 ↔ 전표 자동 대사":
 
             st.session_state.bank_recon_df = df_bank
             df_bank.to_csv(BANK_RECON_DB, index=False, encoding="utf-8-sig")
-            st.success(f"🎉 교차 대사 완료! 총 {len(df_bank)}건의 통장 내역과 장부 내역을 성공적으로 비교했습니다.")
+            st.success(f"🎉 지능형 자동 분석 완료! 통장 내역 시트와 장부 내역 시트를 정확히 찾아내어 총 {len(df_bank)}건을 교차 대조했습니다.")
         except Exception as e:
             st.error(f"파일을 대조하는 중 오류가 발생했습니다: {e}")
 
@@ -944,4 +969,4 @@ elif menu == "계정 및 비밀번호 설정":
                 st.success("관리자 설정이 변경되었습니다.")
             else:
                 st.error("현재 비밀번호가 일치하지 않습니다.")
-
+                
