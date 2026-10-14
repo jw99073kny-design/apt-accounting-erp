@@ -317,7 +317,27 @@ if "household_excel_data" not in st.session_state:
     else:
         st.session_state.household_excel_data = None
 
-for i in range(1, 6):
+STAFF_DB = "staff_leave_register.csv"
+if "staff_df" not in st.session_state:
+    if os.path.exists(STAFF_DB):
+        try:
+            st.session_state.staff_df = pd.read_csv(STAFF_DB, dtype=str).fillna("")
+        except Exception:
+            st.session_state.staff_df = pd.DataFrame(columns=["직원명", "직책", "입사일자", "통상임금"])
+    else:
+        st.session_state.staff_df = pd.DataFrame(columns=["직원명", "직책", "입사일자", "통상임금"])
+
+LEAVE_LOG_DB = "leave_usage_log.csv"
+if "leave_log_df" not in st.session_state:
+    if os.path.exists(LEAVE_LOG_DB):
+        try:
+            st.session_state.leave_log_df = pd.read_csv(LEAVE_LOG_DB, dtype=str).fillna("")
+        except Exception:
+            st.session_state.leave_log_df = pd.DataFrame(columns=["직원명", "사용일자", "사용개수", "휴가종류", "비고"])
+    else:
+        st.session_state.leave_log_df = pd.DataFrame(columns=["직원명", "사용일자", "사용개수", "휴가종류", "비고"])
+
+for i in range(1, 7):
     if f"open_cat_{i}" not in st.session_state:
         st.session_state[f"open_cat_{i}"] = False
 
@@ -406,9 +426,17 @@ if st.session_state.open_cat_4:
         st.session_state.current_menu = "주요 계약 및 보증보험 만기 알림판"
     st.sidebar.markdown("</div>", unsafe_allow_html=True)
 
-if st.sidebar.button("📁 5. 기본 설정", use_container_width=True):
+if st.sidebar.button("📁 5. 인사 및 연차 관리", use_container_width=True):
     st.session_state.open_cat_5 = not st.session_state.open_cat_5
 if st.session_state.open_cat_5:
+    st.sidebar.markdown("<div style='margin-left: 15px;'>", unsafe_allow_html=True)
+    if st.sidebar.button("• 전 직원 연차 및 수당 통합 관리", use_container_width=True):
+        st.session_state.current_menu = "전 직원 연차 및 수당 통합 관리"
+    st.sidebar.markdown("</div>", unsafe_allow_html=True)
+
+if st.sidebar.button("📁 6. 기본 설정", use_container_width=True):
+    st.session_state.open_cat_6 = not st.session_state.open_cat_6
+if st.session_state.open_cat_6:
     st.sidebar.markdown("<div style='margin-left: 15px;'>", unsafe_allow_html=True)
     if st.sidebar.button("• 단지 계정과목 & 국토부 47개", use_container_width=True):
         st.session_state.current_menu = "단지 계정과목 & 국토부 47개 기준"
@@ -455,7 +483,7 @@ elif menu == "XpERP 전년도 장부 및 분개 패턴 학습":
             st.rerun()
 
 
-# 2. XpERP 전표 엑셀 자동 생성 (실시간 연동 전체 선택 체크박스 구현)
+# 2. XpERP 전표 엑셀 자동 생성
 elif menu == "명세서 다중 일괄 검증 & 전표 발행":
     st.title("📄 [기능2] XpERP 일괄 업로드용 엑셀(전표) 자동 생성")
     st.info("검증 완료된 전표 초안들을 XpERP에 한 방에 밀어 넣을 수 있는 엑셀 포맷으로 변환합니다.")
@@ -515,7 +543,7 @@ elif menu == "명세서 다중 일괄 검증 & 전표 발행":
         st.info("등록된 전표 초안이 없습니다. '증빙 통합 관리'나 '은행 입출금 ↔ 전표 자동 대사' 메뉴에서 전표를 추가해 주세요.")
 
 
-# 3. 부과 마감 전 오차 사전 검증기 (파일 업로드형 딸깍 검증기로 전면 개편)
+# 3. 부과 마감 전 오차 사전 검증기
 elif menu == "부과 마감 전 오차 사전 검증기":
     st.title("🔍 [기능3] 실고지 내역 vs 부과예정액 파일 업로드 자동 대사 검증기")
     st.info("한전·수도사업소 등 실제 고지 내역 엑셀과 관리사무소 사전 부과예정 엑셀을 업로드하면, 프로그램이 자동으로 오차와 정산 차액을 '딸깍' 분석합니다.")
@@ -545,7 +573,6 @@ elif menu == "부과 마감 전 오차 사전 검증기":
                 st.dataframe(df_est.head(5), use_container_width=True)
 
             if st.button("⚖️ 파일 자동 교차 대사 및 정산 검증 실행", type="primary"):
-                # 예시로 금액 컬럼(금액 또는 청구금액 등) 자동 탐색 후 비교
                 bill_amt_col = next((c for c in df_bill.columns if "금액" in c or "청구" in c or "합계" in c), None)
                 est_amt_col = next((c for c in df_est.columns if "금액" in c or "예정" in c or "추산" in c), None)
 
@@ -681,7 +708,7 @@ elif menu == "증빙 통합 관리":
             st.rerun()
 
 
-# 8. 은행 입출금 ↔ 장부 자동 대사 (지능형 시트 자동 감지 및 스마트 분석 로직 장착)
+# 8. 은행 입출금 ↔ 장부 자동 대사
 elif menu == "은행 입출금 ↔ 전표 자동 대사":
     st.title("🏦 [기능8] 은행 입출금 ↔ 장부 자동 대사 (통장 대사)")
     st.info("① 은행 통장 거래내역 엑셀과 ② XpERP 장부(전표) 내역 엑셀을 업로드하면, 프로그램이 시트 이름과 데이터를 스스로 분석하여 완벽하게 교차 대조합니다.")
@@ -694,13 +721,11 @@ elif menu == "은행 입출금 ↔ 전표 자동 대사":
 
     if up_bank and up_ledger:
         try:
-            # 1. 통장 파일 스마트 시트 자동 감지 로직
             if up_bank.name.endswith(".csv"):
                 df_bank = pd.read_csv(up_bank)
             else:
                 xls_bank = pd.ExcelFile(up_bank)
                 bank_sheets = xls_bank.sheet_names
-                # '통장', '거래', '내역', '입출금' 키워드가 포함된 시트 우선 탐색
                 target_bank_sheet = bank_sheets[0]
                 for s in bank_sheets:
                     if any(kw in s for kw in ["통장", "거래", "내역", "입출금", "계좌"]):
@@ -708,13 +733,11 @@ elif menu == "은행 입출금 ↔ 전표 자동 대사":
                         break
                 df_bank = pd.read_excel(up_bank, sheet_name=target_bank_sheet)
 
-            # 2. 장부 파일 스마트 시트 자동 감지 로직
             if up_ledger.name.endswith(".csv"):
                 df_ledger = pd.read_csv(up_ledger)
             else:
                 xls_ledger = pd.ExcelFile(up_ledger)
                 ledger_sheets = xls_ledger.sheet_names
-                # '전표', '분개', '장부', '내역' 키워드가 포함된 시트 우선 탐색
                 target_ledger_sheet = ledger_sheets[0]
                 for s in ledger_sheets:
                     if any(kw in s for kw in ["전표", "분개", "장부", "내역", "회계"]):
@@ -764,7 +787,7 @@ elif menu == "은행 입출금 ↔ 전표 자동 대사":
 
             st.session_state.bank_recon_df = df_bank
             df_bank.to_csv(BANK_RECON_DB, index=False, encoding="utf-8-sig")
-            st.success(f"🎉 지능형 자동 분석 완료! 통장 내역 시트와 장부 내역 시트를 정확히 찾아내어 총 {len(df_bank)}건을 교차 대조했습니다.")
+            st.success(f"🎉 지능형 자동 분석 완료! 총 {len(df_bank)}건을 교차 대조했습니다.")
         except Exception as e:
             st.error(f"파일을 대조하는 중 오류가 발생했습니다: {e}")
 
@@ -796,35 +819,11 @@ elif menu == "은행 입출금 ↔ 전표 자동 대사":
             else:
                 st.info("전표 초안으로 등록할 미대사 내역이 없습니다.")
 
-        st.markdown("---")
-        st.markdown("#### 🗑️ 대사 결과 관리")
-        col_b1, col_b2 = st.columns([3, 1])
-        with col_b1:
-            bank_labels = [f"[{row.get('거래일','')}] {row.get('거래내용','')} (출금: {row.get('출금액','0')}원)" for _, row in st.session_state.bank_recon_df.iterrows()]
-            selected_b_label = st.selectbox("삭제할 대사 항목 선택", options=bank_labels, label_visibility="collapsed", key="sel_b_del")
-        with col_b2:
-            if st.button("선택 항목 삭제", type="primary", use_container_width=True):
-                selected_idx = bank_labels.index(selected_b_label)
-                deleted_desc = st.session_state.bank_recon_df.iloc[selected_idx].get('거래내용', '')
-                st.session_state.bank_recon_df = st.session_state.bank_recon_df.drop(selected_idx).reset_index(drop=True)
-                st.session_state.bank_recon_df.to_csv(BANK_RECON_DB, index=False, encoding="utf-8-sig")
-                st.success(f"'{deleted_desc}' 항목이 삭제되었습니다.")
-                st.rerun()
-
-        st.markdown("")
-        if st.button("🗑️ 전체 통장 대사 내역 초기화"):
-            st.session_state.bank_recon_df = None
-            if os.path.exists(BANK_RECON_DB):
-                os.remove(BANK_RECON_DB)
-            st.success("통장 대사 내역이 초기화되었습니다.")
-            st.rerun()
-
 
 # 9. 장기수선충당금 집행·잔액 검증기
 elif menu == "장기수선충당금 적립 및 사용 관리":
     st.title("🛠️ [기능9] 장기수선충당금 집행·잔액 대조 검증기")
     st.info("장충금 집행 전표 입력 시 장기수선계획서 항목 및 가용 잔액 내인지 자동으로 검증합니다.")
-    
     st.metric("현재 장기수선충당금 가용 잔액", "185,400,000원")
     st.success("✅ 최근 집행 등록된 '옥상 방수 공사(1,500만 원)'는 장기수선계획 항목과 일치하며 한도 잔액 내에 있어 적정합니다.")
 
@@ -865,53 +864,278 @@ elif menu == "주요 계약 및 보증보험 만기 알림판":
     if not st.session_state.contracts_df.empty:
         today = date.today()
         df_c = st.session_state.contracts_df.copy()
-        
         df_c["종료일_dt"] = pd.to_datetime(df_c["종료일"]).dt.date
         df_c["보증증권만료일_dt"] = pd.to_datetime(df_c["보증증권만료일"]).dt.date
-        
         df_c["계약D-day"] = df_c["종료일_dt"].apply(lambda x: (x - today).days)
         df_c["보증D-day"] = df_c["보증증권만료일_dt"].apply(lambda x: (x - today).days)
         
         urgent_mask = (df_c["계약D-day"] <= 30) | (df_c["보증D-day"] <= 30)
         df_urgent = df_c[urgent_mask]
-        df_normal = df_c[~urgent_mask]
         
         if not df_urgent.empty:
-            st.error("🚨 [긴급] 30일 이내 만료되는 계약 또는 보증증권이 있습니다! 즉시 재계약 및 입찰을 진행하세요!")
-            display_cols = ["계약명", "계약처", "종료일", "계약D-day", "보증증권만료일", "보증D-day"]
-            st.dataframe(df_urgent[display_cols].style.format({"계약D-day": "D-{:d}", "보증D-day": "D-{:d}"}), use_container_width=True)
+            st.error("🚨 [긴급] 30일 이내 만료되는 계약 또는 보증증권이 있습니다!")
+            st.dataframe(df_urgent[["계약명", "계약처", "종료일", "계약D-day", "보증증권만료일", "보증D-day"]], use_container_width=True)
         else:
-            st.success("✨ 현재 30일 이내에 임박한 만료 건이 없습니다. 모두 안전합니다!")
-            
-        if not df_normal.empty:
-            st.markdown("#### 🟢 여유 있는 계약 목록")
-            display_cols = ["계약명", "계약처", "종료일", "계약D-day", "보증증권만료일", "보증D-day"]
-            st.dataframe(df_normal[display_cols].style.format({"계약D-day": "D-{:d}", "보증D-day": "D-{:d}"}), use_container_width=True)
+            st.success("✨ 현재 30일 이내에 임박한 만료 건이 없습니다.")
+
+
+# =========================================================
+# 12. 전 직원 연차 및 수당 통합 관리 모듈
+# =========================================================
+elif menu == "전 직원 연차 및 수당 통합 관리":
+    st.title("🏖️ [기능12] 전 직원 연차 및 수당 통합 관리 대장")
+    st.info("직원 인사 정보를 관리하고, 휴가 사용 내역을 등록하여 관리할 수 있습니다.")
+
+    tab1, tab2, tab3 = st.tabs([
+        "👥 1. 직원 인사 기본 정보 관리", 
+        "📝 2. 연차 사용 내역 상세 입력", 
+        "📊 3. 기준일자별 통합 연차관리대장 (출력·저장)"
+    ])
+
+    with tab1:
+        st.markdown("#### 📂 직원 명단 엑셀 일괄 업로드 또는 직접 등록")
+        
+        up_staff_excel = st.file_uploader("직원 명단 엑셀/CSV 업로드", type=["xlsx", "csv"], key="staff_excel_upload")
+        
+        if up_staff_excel is not None:
+            uploaded_file_key = f"processed_{up_staff_excel.name}_{up_staff_excel.size}"
+            if st.session_state.get("last_uploaded_file") != uploaded_file_key:
+                try:
+                    df_up = pd.read_csv(up_staff_excel) if up_staff_excel.name.endswith(".csv") else pd.read_excel(up_staff_excel)
+                    df_up.columns = [str(c).strip() for c in df_up.columns]
+                    
+                    col_map = {}
+                    for c in df_up.columns:
+                        if any(k in c for k in ["이름", "성명", "직원"]): col_map[c] = "직원명"
+                        elif any(k in c for k in ["직책", "직위", "담당"]): col_map[c] = "직책"
+                        elif any(k in c for k in ["입사", "일자", "근무일"]): col_map[c] = "입사일자"
+                        elif any(k in c for k in ["임금", "급여", "보수", "통상"]): col_map[c] = "통상임금"
+                    
+                    df_up = df_up.rename(columns=col_map)
+                    for req in ["직원명", "직책", "입사일자", "통상임금"]:
+                        if req not in df_up.columns:
+                            df_up[req] = ""
+                    
+                    df_up = df_up.dropna(subset=["직원명"])
+                    df_up = df_up[df_up["직원명"].astype(str).str.strip() != ""]
+                    
+                    st.session_state.staff_df = df_up[["직원명", "직책", "입사일자", "통상임금"]].astype(str)
+                    st.session_state.staff_df.to_csv(STAFF_DB, index=False, encoding="utf-8-sig")
+                    st.session_state["last_uploaded_file"] = uploaded_file_key
+                    st.success(f"✨ 총 {len(st.session_state.staff_df)}명의 직원 인사 명단이 성공적으로 반영되었습니다!")
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"엑셀 파일을 읽는 중 오류가 발생했습니다: {e}")
 
         st.markdown("---")
-        st.markdown("#### 🗑️ 개별 계약 선택 삭제")
-        col_del1, col_del2 = st.columns([3, 1])
-        with col_del1:
-            contract_labels = [f"[{row['계약처']}] {row['계약명']} (종료: {row['종료일']})" for _, row in st.session_state.contracts_df.iterrows()]
-            selected_label = st.selectbox("삭제할 계약 선택", options=contract_labels, label_visibility="collapsed", key="sel_contract_del")
-        with col_del2:
-            if st.button("선택 삭제", type="primary", use_container_width=True):
-                selected_idx = contract_labels.index(selected_label)
-                deleted_name = st.session_state.contracts_df.iloc[selected_idx]['계약명']
-                st.session_state.contracts_df = st.session_state.contracts_df.drop(selected_idx).reset_index(drop=True)
-                st.session_state.contracts_df.to_csv(CONTRACTS_DB, index=False, encoding="utf-8-sig")
-                st.success(f"'{deleted_name}' 계약이 삭제되었습니다.")
-                st.rerun()
+        st.markdown("#### 📝 직원별 인사 정보 직접 편집")
 
-        st.markdown("")
-        if st.button("🗑️ 전체 계약 목록 초기화"):
-            st.session_state.contracts_df = pd.DataFrame(columns=["계약명", "계약처", "종료일", "보증증권만료일"])
-            if os.path.exists(CONTRACTS_DB):
-                os.remove(CONTRACTS_DB)
-            st.success("전체 계약 목록이 초기화되었습니다.")
+        if st.session_state.staff_df.empty:
+            initial_staff = pd.DataFrame([
+                {"직원명": "김관리", "직책": "관리소장", "입사일자": "2024-03-01", "통상임금": "3500000"},
+                {"직원명": "박경리", "직책": "경리대리", "입사일자": "2025-07-15", "통상임금": "2800000"},
+                {"직원명": "이수선", "직책": "기전과장", "입사일자": "2022-01-10", "통상임금": "3200000"}
+            ])
+            st.session_state.staff_df = initial_staff
+
+        edited_staff_df = st.data_editor(
+            st.session_state.staff_df,
+            use_container_width=True,
+            num_rows="dynamic",
+            key="staff_editor_v6"
+        )
+
+        if st.button("💾 직원 인사 정보 저장", type="primary", use_container_width=True):
+            st.session_state.staff_df = edited_staff_df
+            edited_staff_df.to_csv(STAFF_DB, index=False, encoding="utf-8-sig")
+            st.success("직원 인사 정보가 안전하게 영구 저장되었습니다!")
             st.rerun()
-    else:
-        st.info("현재 등록된 계약 정보가 없습니다. 위 입력창에서 계약을 등록해주세요.")
+
+    with tab2:
+        st.markdown("#### 📝 직원별 연차 사용 내역 상세 기록")
+
+        if not st.session_state.staff_df.empty:
+            staff_names = st.session_state.staff_df["직원명"].tolist()
+            staff_names = [n for n in staff_names if n.strip() != ""]
+
+            if staff_names:
+                with st.form("leave_input_form"):
+                    col_l1, col_l2 = st.columns(2)
+                    with col_l1:
+                        sel_staff = st.selectbox("직원 선택", options=staff_names)
+                    with col_l2:
+                        use_date = st.date_input("연차 사용일자", value=date.today())
+
+                    col_l3, col_l4 = st.columns(2)
+                    with col_l3:
+                        leave_type = st.selectbox(
+                            "휴가 종류", 
+                            options=["연차", "반차(오전)", "반차(오후)", "시간연차(조퇴/외출)", "병가/기타"],
+                            key="leave_type_select"
+                        )
+                    
+                    default_days = 0.5 if "반차" in leave_type else 1.0
+                    with col_l4:
+                        use_days = st.number_input("사용 개수 (일)", min_value=0.1, max_value=30.0, value=default_days, step=0.5)
+
+                    memo = st.text_input("비고 및 사유", value="개인 사유")
+
+                    if st.form_submit_button("➕ 연차 사용 내역 등록"):
+                        new_log = pd.DataFrame([{
+                            "직원명": sel_staff,
+                            "사용일자": str(use_date),
+                            "사용개수": str(use_days),
+                            "휴가종류": leave_type,
+                            "비고": memo
+                        }])
+                        st.session_state.leave_log_df = pd.concat([st.session_state.leave_log_df, new_log], ignore_index=True)
+                        st.session_state.leave_log_df.to_csv(LEAVE_LOG_DB, index=False, encoding="utf-8-sig")
+                        st.success(f"'{sel_staff}'님의 연차 사용 내역이 성공적으로 등록되었습니다!")
+                        st.rerun()
+            else:
+                st.warning("먼저 '1. 직원 인사 기본 정보 관리' 탭에서 직원명을 등록해 주세요.")
+
+        st.markdown("---")
+        st.markdown("#### 📋 등록된 전체 연차 사용 내역 리스트")
+        
+        if not st.session_state.leave_log_df.empty:
+            df_log_view = st.session_state.leave_log_df.copy()
+            select_all_log = st.checkbox("☑️ 전체 항목 선택 / 해제", key="select_all_leave_log")
+            df_log_view.insert(0, "선택", select_all_log)
+            
+            edited_log_df = st.data_editor(
+                df_log_view,
+                use_container_width=True,
+                num_rows="fixed",
+                key="leave_log_editor_v2"
+            )
+            
+            col_del_btn1, col_del_btn2 = st.columns([2, 2])
+            with col_del_btn1:
+                if st.button("🗑️ 체크한 항목 선택 삭제", type="primary", use_container_width=True):
+                    selected_rows = edited_log_df[edited_log_df["선택"] == True]
+                    if not selected_rows.empty:
+                        remaining_log = edited_log_df[edited_log_df["선택"] == False].drop(columns=["선택"])
+                        st.session_state.leave_log_df = remaining_log.reset_index(drop=True)
+                        st.session_state.leave_log_df.to_csv(LEAVE_LOG_DB, index=False, encoding="utf-8-sig")
+                        st.success(f"선택한 {len(selected_rows)}건의 연차 사용 내역이 삭제되었습니다.")
+                        st.rerun()
+                    else:
+                        st.warning("삭제할 항목의 체크박스를 선택해 주세요.")
+            with col_del_btn2:
+                if st.button("🗑️ 전체 연차 사용 내역 초기화", type="primary", use_container_width=True):
+                    st.session_state.leave_log_df = pd.DataFrame(columns=["직원명", "사용일자", "사용개수", "휴가종류", "비고"])
+                    if os.path.exists(LEAVE_LOG_DB):
+                        os.remove(LEAVE_LOG_DB)
+                    st.success("전체 연차 사용 내역이 초기화되었습니다.")
+                    st.rerun()
+        else:
+            st.info("등록된 연차 사용 내역이 없습니다.")
+
+    with tab3:
+        st.markdown("### 📊 기준일자별 전 직원 연차 및 수당 통합 리포트")
+        selected_query_date = st.date_input("📅 연차 산정 기준 조회일자 선택", value=date.today(), key="leave_query_date_picker")
+        st.markdown("---")
+
+        if not st.session_state.staff_df.empty:
+            used_leave_dict = {}
+            if not st.session_state.leave_log_df.empty:
+                for _, log_row in st.session_state.leave_log_df.iterrows():
+                    s_name = str(log_row.get("직원명", ""))
+                    try:
+                        u_cnt = float(str(log_row.get("사용개수", "0")))
+                    except ValueError:
+                        u_cnt = 0.0
+                    used_leave_dict[s_name] = used_leave_dict.get(s_name, 0.0) + u_cnt
+
+            report_rows = []
+            for _, row in st.session_state.staff_df.iterrows():
+                name = str(row.get("직원명", ""))
+                role = str(row.get("직책", ""))
+                hire_date_str = str(row.get("입사일자", ""))
+                
+                try:
+                    salary = float(str(row.get("통상임금", "0")).replace(",", ""))
+                except ValueError:
+                    salary = 0.0
+
+                if not name or not hire_date_str:
+                    continue
+
+                try:
+                    h_date = date.fromisoformat(hire_date_str)
+                except ValueError:
+                    continue
+
+                days_worked = (selected_query_date - h_date).days
+                if days_worked < 0:
+                    days_worked = 0
+
+                years_worked = days_worked // 365
+
+                if days_worked < 365:
+                    months_worked = days_worked // 30
+                    total_generated = min(months_worked, 11)
+                    calc_type = "1년 미만 (월차 1개씩)"
+                else:
+                    extra_years = max(0, years_worked - 1)
+                    bonus = extra_years // 2
+                    total_generated = min(15 + bonus, 25)
+                    calc_type = f"만 {years_worked}년 이상 (기본15+가산{bonus})"
+
+                used_leave = used_leave_dict.get(name, 0.0)
+                remaining_leave = max(0.0, total_generated - used_leave)
+
+                daily_wage = (salary / 209.0) * 8.0 if salary > 0 else 0.0
+                estimated_allowance = remaining_leave * daily_wage
+
+                report_rows.append({
+                    "직원명": name,
+                    "직책": role,
+                    "입사일자": hire_date_str,
+                    "근속기간": f"약 {years_worked}년 ({days_worked}일)",
+                    "산정기준": calc_type,
+                    "총발생연차": total_generated,
+                    "사용연차": used_leave,
+                    "잔여연차": remaining_leave,
+                    "통상임금(월)": int(salary),
+                    "예상연차수당": int(estimated_allowance)
+                })
+
+            if report_rows:
+                df_report = pd.DataFrame(report_rows)
+                
+                tot_gen = df_report["총발생연차"].sum()
+                tot_used = df_report["사용연차"].sum()
+                tot_rem = df_report["잔여연차"].sum()
+                tot_allowance = df_report["예상연차수당"].sum()
+
+                m1, m2, m3, m4 = st.columns(4)
+                m1.metric("전 직원 총 발생 연차", f"{tot_gen:,.1f}개")
+                m2.metric("전 직원 총 사용 연차", f"{tot_used:,.1f}개")
+                m3.metric("전 직원 총 잔여 연차", f"{tot_rem:,.1f}개")
+                m4.metric("총 미사용 연차수당 예상액", f"{tot_allowance:,.0f}원")
+
+                st.markdown("---")
+                st.dataframe(df_report, use_container_width=True)
+
+                out_excel = io.BytesIO()
+                with pd.ExcelWriter(out_excel, engine="openpyxl") as writer:
+                    df_report.to_excel(writer, index=False, sheet_name="연차관리대장")
+                out_excel.seek(0)
+
+                st.markdown("---")
+                st.download_button(
+                    "📥 [최종본] 전 직원 연차관리대장 엑셀 파일 다운로드 (.xlsx)",
+                    data=out_excel.getvalue(),
+                    file_name=f"apt_leave_management_report_{selected_query_date.isoformat()}.xlsx",
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    type="primary"
+                )
+            else:
+                st.info("등록된 직원 데이터가 올바르지 않거나 없습니다.")
+        else:
+            st.info("등록된 직원 정보가 없습니다.")
 
 
 # 월말 결산 부속명세서
@@ -938,17 +1162,9 @@ elif menu == "세대별 관리비 부과 및 미납 관리":
 
     if st.session_state.household_excel_data is not None and not isinstance(st.session_state.household_excel_data, str):
         st.dataframe(st.session_state.household_excel_data, use_container_width=True)
-        
-        st.markdown("---")
-        if st.button("🗑️ 세대별 부과 내역 초기화"):
-            st.session_state.household_excel_data = None
-            if os.path.exists(HOUSE_DB):
-                os.remove(HOUSE_DB)
-            st.success("세대별 부과 내역이 초기화되었습니다.")
-            st.rerun()
 
 
-# 단지 계정과목 & 국토부 47개 (기본 설정)
+# 단지 계정과목 & 국토부 47개 기준
 elif menu == "단지 계정과목 & 국토부 47개 기준":
     st.title("⚙️ 단지 계정과목표 & 국토부 표준 47개 관리")
     st.dataframe(st.session_state.accounts_df, use_container_width=True)
@@ -969,4 +1185,4 @@ elif menu == "계정 및 비밀번호 설정":
                 st.success("관리자 설정이 변경되었습니다.")
             else:
                 st.error("현재 비밀번호가 일치하지 않습니다.")
-                
+
