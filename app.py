@@ -317,26 +317,26 @@ if "household_excel_data" not in st.session_state:
     else:
         st.session_state.household_excel_data = None
 
-STAFF_DB = "staff_leave_register.csv"
-if "staff_df" not in st.session_state:
-    if os.path.exists(STAFF_DB):
+# 실무형 연차 및 직원 대장 DB (근무형태, 1일근무시간, 휴게시간, 사용일자_내역, 사용개수_총합, 비고사유 통합)
+STAFF_LEAVE_INTEGRATED_DB = "staff_leave_integrated_register_full_tabs.csv"
+if "staff_leave_df" not in st.session_state:
+    if os.path.exists(STAFF_LEAVE_INTEGRATED_DB):
         try:
-            df_staff_saved = pd.read_csv(STAFF_DB, dtype=str).fillna("")
-            if "근무형태" not in df_staff_saved.columns:
-                df_staff_saved["근무형태"] = "주5일 (일반)"
-            
-            # 구버전 감단직 명칭 자동 변경
-            df_staff_saved["근무형태"] = df_staff_saved["근무형태"].replace({
-                "격일제 (경비/미화 감단직)": "격일제 (경비 감단직)",
-                "기타(단축근무 등)": "미화원 (단축근무)"
-            })
-            st.session_state.staff_df = df_staff_saved
+            st.session_state.staff_leave_df = pd.read_csv(STAFF_LEAVE_INTEGRATED_DB, dtype=str).fillna("")
         except Exception:
-            st.session_state.staff_df = pd.DataFrame(columns=["직원명", "직책", "입사일자", "통상임금", "근무형태"])
+            st.session_state.staff_leave_df = pd.DataFrame(
+                columns=["직원명", "직책", "입사일자", "통상임금", "근무형태", "1일근무시간", "휴게시간", "사용일자_내역", "사용개수_총합", "비고사유"]
+            )
     else:
-        st.session_state.staff_df = pd.DataFrame(columns=["직원명", "직책", "입사일자", "통상임금", "근무형태"])
+        initial_data = pd.DataFrame([
+            {"직원명": "김관리", "직책": "관리소장", "입사일자": "2024-03-01", "통상임금": "3500000", "근무형태": "주5일 (일반)", "1일근무시간": "8", "휴게시간": "1", "사용일자_내역": "2026-05-01, 2026-08-15", "사용개수_총합": "2.0", "비고사유": "하계휴가"},
+            {"직원명": "박경리", "직책": "경리대리", "입사일자": "2025-07-15", "통상임금": "2800000", "근무형태": "주5일 (일반)", "1일근무시간": "8", "휴게시간": "1", "사용일자_내역": "", "사용개수_총합": "0.0", "비고사유": ""},
+            {"직원명": "최경비", "직책": "경비원", "입사일자": "2023-01-01", "통상임금": "2600000", "근무형태": "격일제 (경비 감단직)", "1일근무시간": "24", "휴게시간": "8", "사용일자_내역": "", "사용개수_총합": "0.0", "비고사유": "주야간 휴게시간 8시간 반영"},
+            {"직원명": "이미화", "직책": "미화원", "입사일자": "2023-05-10", "통상임금": "1800000", "근무형태": "미화원 (단축근무)", "1일근무시간": "6", "휴게시간": "1", "사용일자_내역": "2026-06-10", "사용개수_총합": "1.0", "비고사유": "단축근무"}
+        ])
+        st.session_state.staff_leave_df = initial_data
 
-LEAVE_LOG_DB = "leave_usage_log.csv"
+LEAVE_LOG_DB = "leave_usage_log_tabs.csv"
 if "leave_log_df" not in st.session_state:
     if os.path.exists(LEAVE_LOG_DB):
         try:
@@ -555,7 +555,7 @@ elif menu == "명세서 다중 일괄 검증 & 전표 발행":
 # 3. 부과 마감 전 오차 사전 검증기
 elif menu == "부과 마감 전 오차 사전 검증기":
     st.title("🔍 [기능3] 실고지 내역 vs 부과예정액 파일 업로드 자동 대사 검증기")
-    st.info("한전·수도사업소 등 실제 고지 내역 엑셀과 관리사무소 사전 부과예정 엑셀을 업로드하면, 프로그램이 자동으로 오차와 정산 차액을 '딸깍' 분석합니다.")
+    st.info("한전·수도사업소 등 실제 고지 내역 엑셀과 관리사무소 사전 부과예정 엑셀을 업로드하면, 프로그램이 자동으로 오차와 정산 차액을 분석합니다.")
     
     col_up1, col_up2 = st.columns(2)
     with col_up1:
@@ -593,7 +593,7 @@ elif menu == "부과 마감 전 오차 사전 검증기":
                     total_est_sum = df_est[est_amt_col].sum()
                     diff_sum = total_bill_sum - total_est_sum
 
-                    st.markdown("### 📊 딸깍 자동 검증 결과 리포트")
+                    st.markdown("### 📊 자동 검증 결과 리포트")
                     st.metric("실제 고지 총액", f"{total_bill_sum:,.0f}원")
                     st.metric("사전 예정(추산) 총액", f"{total_est_sum:,.0f}원")
 
@@ -889,22 +889,40 @@ elif menu == "주요 계약 및 보증보험 만기 알림판":
 
 
 # =========================================================
-# 12. 전 직원 연차 및 수당 통합 관리 모듈 (수정 완료)
+# 12. 전 직원 연차 및 수당 통합 관리 모듈 (3개 탭 + 엑셀 업로드 복원)
 # =========================================================
 elif menu == "전 직원 연차 및 수당 통합 관리":
-    st.title("🏖️ [기능12] 전 직원 연차 및 수당 통합 관리 대장")
-    st.info("직원 인사 정보를 관리하고, 직종별(일반 주5일 / 경비 감단직 / 미화원) 맞춤 근무형태를 선택하여 연차 수당을 산정할 수 있습니다.")
+    st.title("🏖️ [기능12] 전 직원 연차 및 수당 통합 관리 대장 (실무 맞춤형)")
+    st.info("회계연도/입사일 기준 선택, 직원 명단 엑셀 일괄 업로드, 직종별(일반직, 미화원 단축근무, 경비원 감단직 24시간 교대/휴게시간) 직접 세팅, 3개의 탭 구성을 완벽 지원합니다.")
 
+    # 상단 연차 산정 기준 환경 설정 바
+    st.markdown("#### ⚙️ 연차 산정 환경 설정")
+    col_opt1, col_opt2, col_opt3 = st.columns(3)
+    with col_opt1:
+        calc_basis = st.radio(
+            "📅 연차 산정 기준 선택",
+            options=["회계연도 기준 (1/1 ~ 12/31 일괄 부여)", "입사일 기준 (근로기준법 원칙)"],
+            index=0,
+            help="아파트 관리사무소 실무에서 주로 채택하는 기준입니다."
+        )
+    with col_opt2:
+        target_year = st.number_input("산정 대상 연도", min_value=2020, max_value=2030, value=date.today().year)
+    with col_opt3:
+        st.markdown("<br>", unsafe_allow_html=True)
+        st.success(f"현재 적용 방식: **{calc_basis}**")
+
+    st.markdown("---")
+
+    # 완벽하게 복원된 3개 탭 구조
     tab1, tab2, tab3 = st.tabs([
-        "👥 1. 직원 인사 기본 정보 관리", 
-        "📝 2. 연차 사용 내역 상세 입력", 
+        "👥 1. 직원 인사 기본 정보 관리 (엑셀 업로드·시간 직접 세팅)", 
+        "📝 2. 연차 사용 내역 상세 입력 (사용일자·사유)", 
         "📊 3. 기준일자별 통합 연차관리대장 (출력·저장)"
     ])
 
     with tab1:
-        st.markdown("#### 📂 직원 명단 엑셀 일괄 업로드 또는 직접 등록")
-        
-        up_staff_excel = st.file_uploader("직원 명단 엑셀/CSV 업로드", type=["xlsx", "csv"], key="staff_excel_upload")
+        st.markdown("#### 📂 직원 명단 엑셀 일괄 업로드")
+        up_staff_excel = st.file_uploader("직원 명단 엑셀/CSV 업로드", type=["xlsx", "csv"], key="staff_excel_upload_tab1")
         
         if up_staff_excel is not None:
             uploaded_file_key = f"processed_{up_staff_excel.name}_{up_staff_excel.size}"
@@ -922,68 +940,58 @@ elif menu == "전 직원 연차 및 수당 통합 관리":
                         elif any(k in c for k in ["형태", "근무", "유형"]): col_map[c] = "근무형태"
                     
                     df_up = df_up.rename(columns=col_map)
-                    for req in ["직원명", "직책", "입사일자", "통상임금", "근무형태"]:
+                    for req, default_val in [("직원명", "직원"), ("직책", "담당"), ("입사일자", "2024-01-01"), ("통상임금", "2500000"), ("근무형태", "주5일 (일반)"), ("1일근무시간", "8"), ("휴게시간", "1")]:
                         if req not in df_up.columns:
-                            df_up[req] = "주5일 (일반)"
+                            df_up[req] = default_val
                     
                     df_up = df_up.dropna(subset=["직원명"])
                     df_up = df_up[df_up["직원명"].astype(str).str.strip() != ""]
                     
-                    st.session_state.staff_df = df_up[["직원명", "직책", "입사일자", "통상임금", "근무형태"]].astype(str)
-                    st.session_state.staff_df.to_csv(STAFF_DB, index=False, encoding="utf-8-sig")
+                    st.session_state.staff_leave_df = df_up[["직원명", "직책", "입사일자", "통상임금", "근무형태", "1일근무시간", "휴게시간"]].astype(str)
+                    st.session_state.staff_leave_df.to_csv(STAFF_LEAVE_INTEGRATED_DB, index=False, encoding="utf-8-sig")
                     st.session_state["last_uploaded_file"] = uploaded_file_key
-                    st.success(f"✨ 총 {len(st.session_state.staff_df)}명의 직원 인사 명단이 성공적으로 반영되었습니다!")
+                    st.success(f"✨ 총 {len(st.session_state.staff_leave_df)}명의 직원 명단이 성공적으로 업로드 및 반영되었습니다!")
                     st.rerun()
                 except Exception as e:
                     st.error(f"엑셀 파일을 읽는 중 오류가 발생했습니다: {e}")
 
         st.markdown("---")
-        st.markdown("#### 📝 직원별 인사 정보 직접 편집 (실무용 근무형태 선택)")
-
-        if st.session_state.staff_df.empty:
-            initial_staff = pd.DataFrame([
-                {"직원명": "김관리", "직책": "관리소장", "입사일자": "2024-03-01", "통상임금": "3500000", "근무형태": "주5일 (일반)"},
-                {"직원명": "박경리", "직책": "경리대리", "입사일자": "2025-07-15", "통상임금": "2800000", "근무형태": "주5일 (일반)"},
-                {"직원명": "최경비", "직책": "경비원", "입사일자": "2023-01-01", "통상임금": "2600000", "근무형태": "격일제 (경비 감단직)"},
-                {"직원명": "이미화", "직책": "미화원", "입사일자": "2023-05-10", "통상임금": "1800000", "근무형태": "미화원 (단축근무)"}
-            ])
-            st.session_state.staff_df = initial_staff
+        st.markdown("#### 📝 직원 명단 및 직종별 근로·휴게시간 직접 세팅 (표 직접 편집 가능)")
+        st.markdown("💡 **직종별 직접 입력:** 일반직(8시간), 미화원(시간 직접 입력), 경비원(감단직 24시간 교대 / 휴게시간 직접 입력)을 표에서 직접 수정할 수 있습니다.")
 
         edited_staff_df = st.data_editor(
-            st.session_state.staff_df,
+            st.session_state.staff_leave_df,
             use_container_width=True,
             num_rows="dynamic",
             column_config={
                 "근무형태": st.column_config.SelectboxColumn(
                     "근무형태",
-                    help="실무 근로형태별 연차 산정 기준 선택",
-                    options=[
-                        "주5일 (일반)",
-                        "격일제 (경비 감단직)",
-                        "미화원 (단축근무)",
-                        "기타 (단축/파트타임)"
-                    ],
+                    options=["주5일 (일반)", "격일제 (경비 감단직)", "미화원 (단축근무)"],
                     required=True
-                )
+                ),
+                "1일근무시간": st.column_config.TextColumn("1일 근무시간 (h)"),
+                "휴게시간": st.column_config.TextColumn("휴게시간 (h)"),
             },
-            key="staff_editor_v8"
+            key="staff_editor_tabs_v5"
         )
 
-        if st.button("💾 직원 인사 정보 저장", type="primary", use_container_width=True):
-            st.session_state.staff_df = edited_staff_df
-            edited_staff_df.to_csv(STAFF_DB, index=False, encoding="utf-8-sig")
-            st.success("직원 인사 정보가 안전하게 영구 저장되었습니다!")
-            st.rerun()
+        col_st_btn1, _ = st.columns([1, 4])
+        with col_st_btn1:
+            if st.button("💾 직원 인사 정보 영구 저장", type="primary", use_container_width=True):
+                st.session_state.staff_leave_df = edited_staff_df
+                edited_staff_df.to_csv(STAFF_LEAVE_INTEGRATED_DB, index=False, encoding="utf-8-sig")
+                st.success("직원 인사 및 근로시간 정보가 안전하게 영구 저장되었습니다!")
+                st.rerun()
 
     with tab2:
-        st.markdown("#### 📝 직원별 연차 사용 내역 상세 기록")
+        st.markdown("#### 📝 직원별 연차 사용 내역 상세 기록 (사용일자, 개수, 사유)")
 
-        if not st.session_state.staff_df.empty:
-            staff_names = st.session_state.staff_df["직원명"].tolist()
-            staff_names = [n for n in staff_names if n.strip() != ""]
+        if not st.session_state.staff_leave_df.empty:
+            staff_names = st.session_state.staff_leave_df["직원명"].tolist()
+            staff_names = [n for n in staff_names if str(n).strip() != ""]
 
             if staff_names:
-                with st.form("leave_input_form"):
+                with st.form("leave_input_form_tabs"):
                     col_l1, col_l2 = st.columns(2)
                     with col_l1:
                         sel_staff = st.selectbox("직원 선택", options=staff_names)
@@ -995,14 +1003,14 @@ elif menu == "전 직원 연차 및 수당 통합 관리":
                         leave_type = st.selectbox(
                             "휴가 종류", 
                             options=["연차", "반차(오전)", "반차(오후)", "시간연차(조퇴/외출)", "병가/기타"],
-                            key="leave_type_select"
+                            key="leave_type_select_tab"
                         )
                     
                     default_days = 0.5 if "반차" in leave_type else 1.0
                     with col_l4:
                         use_days = st.number_input("사용 개수 (일)", min_value=0.1, max_value=30.0, value=default_days, step=0.5)
 
-                    memo = st.text_input("비고 및 사유", value="개인 사유")
+                    memo = st.text_input("비고사유 (예: 하계휴가, 경조사)", value="개인 사유")
 
                     if st.form_submit_button("➕ 연차 사용 내역 등록"):
                         new_log = pd.DataFrame([{
@@ -1024,14 +1032,14 @@ elif menu == "전 직원 연차 및 수당 통합 관리":
         
         if not st.session_state.leave_log_df.empty:
             df_log_view = st.session_state.leave_log_df.copy()
-            select_all_log = st.checkbox("☑️ 전체 항목 선택 / 해제", key="select_all_leave_log")
+            select_all_log = st.checkbox("☑️ 전체 항목 선택 / 해제", key="select_all_leave_log_tab")
             df_log_view.insert(0, "선택", select_all_log)
             
             edited_log_df = st.data_editor(
                 df_log_view,
                 use_container_width=True,
                 num_rows="fixed",
-                key="leave_log_editor_v2"
+                key="leave_log_editor_tabs_v2"
             )
             
             col_del_btn1, col_del_btn2 = st.columns([2, 2])
@@ -1058,10 +1066,10 @@ elif menu == "전 직원 연차 및 수당 통합 관리":
 
     with tab3:
         st.markdown("### 📊 기준일자별 전 직원 연차 및 수당 통합 리포트")
-        selected_query_date = st.date_input("📅 연차 산정 기준 조회일자 선택", value=date.today(), key="leave_query_date_picker")
+        selected_query_date = st.date_input("📅 연차 산정 기준 조회일자 선택", value=date(target_year, 12, 31), key="leave_query_date_picker_tab")
         st.markdown("---")
 
-        if not st.session_state.staff_df.empty:
+        if not st.session_state.staff_leave_df.empty:
             used_leave_dict = {}
             if not st.session_state.leave_log_df.empty:
                 for _, log_row in st.session_state.leave_log_df.iterrows():
@@ -1073,7 +1081,7 @@ elif menu == "전 직원 연차 및 수당 통합 관리":
                     used_leave_dict[s_name] = used_leave_dict.get(s_name, 0.0) + u_cnt
 
             report_rows = []
-            for _, row in st.session_state.staff_df.iterrows():
+            for _, row in st.session_state.staff_leave_df.iterrows():
                 name = str(row.get("직원명", ""))
                 role = str(row.get("직책", ""))
                 hire_date_str = str(row.get("입사일자", ""))
@@ -1083,6 +1091,16 @@ elif menu == "전 직원 연차 및 수당 통합 관리":
                     salary = float(str(row.get("통상임금", "0")).replace(",", ""))
                 except ValueError:
                     salary = 0.0
+
+                try:
+                    d_hours = float(str(row.get("1일근무시간", "8")))
+                except ValueError:
+                    d_hours = 8.0
+
+                try:
+                    rest_hours = float(str(row.get("휴게시간", "1")))
+                except ValueError:
+                    rest_hours = 1.0
 
                 if not name or not hire_date_str:
                     continue
@@ -1098,29 +1116,39 @@ elif menu == "전 직원 연차 및 수당 통합 관리":
 
                 years_worked = days_worked // 365
 
-                if days_worked < 365:
-                    months_worked = days_worked // 30
-                    total_generated = min(months_worked, 11)
-                    calc_type = "1년 미만 (월차 1개씩)"
+                # 연차 발생일수 계산 로직 (회계연도 기준 vs 입사일 기준 선택 반영)
+                if "회계연도" in calc_basis:
+                    if days_worked < 365:
+                        total_generated = round((days_worked / 365.0) * 15, 1)
+                        calc_type = "회계연도 기준 (비례 부여)"
+                    else:
+                        extra_years = max(0, years_worked - 1)
+                        bonus = extra_years // 2
+                        total_generated = min(15 + bonus, 25)
+                        calc_type = f"회계연도 기준 (만 {years_worked}년 이상)"
                 else:
-                    extra_years = max(0, years_worked - 1)
-                    bonus = extra_years // 2
-                    total_generated = min(15 + bonus, 25)
-                    calc_type = f"만 {years_worked}년 이상 (기본15+가산{bonus})"
+                    if days_worked < 365:
+                        months_worked = days_worked // 30
+                        total_generated = min(months_worked, 11)
+                        calc_type = "입사일 기준 (1년 미만 월차)"
+                    else:
+                        extra_years = max(0, years_worked - 1)
+                        bonus = extra_years // 2
+                        total_generated = min(15 + bonus, 25)
+                        calc_type = f"입사일 기준 (만 {years_worked}년 이상)"
 
                 used_leave = used_leave_dict.get(name, 0.0)
                 remaining_leave = max(0.0, total_generated - used_leave)
 
-                # 근무형태별 1일 통상임금 환산 로직
+                # 통상임금 시급 및 1일 수당 산정 (직종별 휴게시간 및 근무시간 직접 반영)
                 if "격일제" in work_type:
-                    # 경비 감단직 격일제: 월 243시간 기준, 1일 12시간 환산
-                    daily_wage = (salary / 243.0) * 12.0 if salary > 0 else 0.0
+                    effective_hours = max(1.0, d_hours - rest_hours)
+                    daily_wage = (salary / 243.0) * effective_hours if salary > 0 else 0.0
                 elif "미화원" in work_type:
-                    # 미화원 단축근무: 주 30시간 기준(월 156시간), 하루 6시간 환산
-                    daily_wage = (salary / 156.0) * 6.0 if salary > 0 else 0.0
+                    effective_hours = max(1.0, d_hours - rest_hours)
+                    daily_wage = (salary / 156.0) * effective_hours if salary > 0 else 0.0
                 else:
-                    # 일반 주5일제: 주 40시간 기준(월 209시간), 하루 8시간 환산
-                    daily_wage = (salary / 209.0) * 8.0 if salary > 0 else 0.0
+                    daily_wage = (salary / 209.0) * d_hours if salary > 0 else 0.0
 
                 estimated_allowance = remaining_leave * daily_wage
 
@@ -1128,14 +1156,14 @@ elif menu == "전 직원 연차 및 수당 통합 관리":
                     "직원명": name,
                     "직책": role,
                     "근무형태": work_type,
-                    "입사일자": hire_date_str,
-                    "근속기간": f"약 {years_worked}년 ({days_worked}일)",
-                    "산정기준": calc_type,
+                    "1일근무시간": d_hours,
+                    "휴게시간": rest_hours,
                     "총발생연차": total_generated,
                     "사용연차": used_leave,
                     "잔여연차": remaining_leave,
                     "통상임금(월)": int(salary),
-                    "예상연차수당": int(estimated_allowance)
+                    "1일 통상임금": int(daily_wage),
+                    "예상 연차수당": int(estimated_allowance)
                 })
 
             if report_rows:
@@ -1144,7 +1172,7 @@ elif menu == "전 직원 연차 및 수당 통합 관리":
                 tot_gen = df_report["총발생연차"].sum()
                 tot_used = df_report["사용연차"].sum()
                 tot_rem = df_report["잔여연차"].sum()
-                tot_allowance = df_report["예상연차수당"].sum()
+                tot_allowance = df_report["예상 연차수당"].sum()
 
                 m1, m2, m3, m4 = st.columns(4)
                 m1.metric("전 직원 총 발생 연차", f"{tot_gen:,.1f}개")
@@ -1222,4 +1250,3 @@ elif menu == "계정 및 비밀번호 설정":
             else:
                 st.error("현재 비밀번호가 일치하지 않습니다.")
 
-                                     
