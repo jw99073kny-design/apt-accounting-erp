@@ -1,8 +1,9 @@
 streamlit
 pandas
 openpyxl
+pillow
 pytesseract
+pymupdf
 opencv-python-headless
-numpy
-Pillow
-PyMuPDF
+openai-whisper
+torch
